@@ -1,0 +1,252 @@
+function authorizeDriveAccess() {
+  var pdfFileId = "11H13k90z1osrhNjga2frYM6gp5NsyxiF";
+  var file = DriveApp.getFileById(pdfFileId);
+  Logger.log("File found: " + file.getName());
+  Logger.log("✓ Authorization successful!");
+} 
+
+function sendWaterWiseEmails() {
+  // Get the active spreadsheet
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  
+  // Get all data from the sheet
+  var dataRange = sheet.getDataRange();
+  var data = dataRange.getValues();
+  
+  // Skip header row and process each volunteer
+  var successCount = 0;
+  var failCount = 0;
+  var errors = [];
+  
+  for (var i = 1; i < data.length; i++) {
+    var fullName = data[i][0];
+    var email = data[i][1];
+    
+    // Skip empty rows
+    if (!fullName || !email) {
+      continue;
+    }
+    
+    // Extract first name from full name
+    var firstName = fullName.split(' ')[0];
+    
+    // Clean up email (remove extra spaces)
+    email = email.toString().trim();
+    
+    try {
+      // Send the email
+      sendPersonalizedEmail(email, firstName, fullName);
+      successCount++;
+      
+      // Add a small delay to avoid hitting Gmail quota limits
+      Utilities.sleep(1000); // 1 second delay between emails
+      
+      Logger.log("✓ Sent to: " + fullName + " (" + email + ")");
+      
+    } catch (error) {
+      failCount++;
+      errors.push(fullName + " (" + email + "): " + error.toString());
+      Logger.log("✗ Failed to send to: " + fullName + " - " + error);
+    }
+  }
+  
+  // Show summary
+  var message = "Email Campaign Complete!\n\n" +
+                "✓ Successfully sent: " + successCount + "\n" +
+                "✗ Failed: " + failCount;
+  
+  if (errors.length > 0) {
+    message += "\n\nErrors:\n" + errors.join("\n");
+  }
+  
+  SpreadsheetApp.getUi().alert(message);
+  Logger.log(message);
+}
+
+function sendPersonalizedEmail(email, firstName, fullName) {
+  //var subject = "Welcome to the CompanyName WaterWise Testing Program! 🌊";
+  var subject = "📸 WaterWise: Share Your Installation Story!";
+  var htmlBody = createFollowUpEmailHTML(firstName);
+  
+  // Get the PDF from Google Drive
+  //var pdfFileId = "11H13k90z1osrhNjga2frYM6gp5NsyxiF";
+  //var pdfFile = DriveApp.getFileById(pdfFileId);
+  
+  // Send email with HTML body and PDF attachment
+  MailApp.sendEmail({
+    to: email,
+    cc: "email.address@company.com", 
+    subject: subject,
+    htmlBody: htmlBody,
+    name: "title here",
+    //attachments: [pdfFile.getAs(MimeType.PDF)]
+  });
+}
+function createEmailHTML(firstName) {
+  var html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CompanyName WaterWise</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4;">
+    <tr>
+      <td style="padding: 20px 0;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header with CompanyName Purple and Logo in Top Right -->
+          <tr>
+            <td style="background-color:#F8F5FC; padding: 10px 30px 35px 30px; position: relative;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align: left; vertical-align: bottom;">
+                    <h1 style="margin: 0; color: #4B286D; font-size: 28px; font-weight: 600;">
+                      WaterWise
+                    </h1>
+                    <p style="margin: 10px 0 0 0; color: #333333; font-size: 16px; font-weight: 300;">
+                      Sensor Testing Program
+                    </p>
+                  </td>
+                  <td style="text-align: right; vertical-align: top; width: 80px; padding-top: 0px;">
+                    <!-- CompanyName Logo - Top Right -->
+                    <img src="https://i.imgur.com/RwTt7NA.png" 
+                         alt="Company Name" 
+                         width="40" 
+                         height="auto" 
+                         style="display: block; max-width: 70px; height: auto;" />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Green accent bar -->
+          <tr>
+            <td style="background-color: #66CC00; height: 6px; padding: 0;"></td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              
+              <h2 style="margin: 0 0 20px 0; color: #4B286D; font-size: 24px; font-weight: 600;">
+                Dear ${firstName},
+              </h2>
+              
+              <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                We're thrilled to have you as a volunteer for the Company Name testing program! 
+                Your participation is helping us build innovative solutions for water conservation, and we are grateful to have you on this journey. 🎉
+              </p>
+              
+              <p style="margin: 0 0 25px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                You should have received your sensors along with a welcome email from our trusted vendor partner, 
+                <strong>Vendor Name</strong>, to help you set up your online profile.
+              </p>
+              
+              <!-- Installation Steps Box -->
+              <div style="background-color: #F8F5FC; border-left: 4px solid #66CC00; padding: 25px; margin: 25px 0; border-radius: 4px;">
+                <h3 style="margin: 0 0 15px 0; color: #4B286D; font-size: 20px; font-weight: 600;">
+                  📋 Quick Installation Guide
+                </h3>
+                
+                <p style="margin: 0 0 12px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                  Getting started is simple! Just follow these four easy steps:
+                </p>
+                
+                <ol style="margin: 10px 0 0 0; padding-left: 20px; color: #333333; font-size: 15px; line-height: 1.8;">
+                  <li style="margin-bottom: 10px;">
+                    <strong>Connect to Wi-Fi:</strong> Use your computer or mobile phone to access the app and connect your sensor
+                  </li>
+                  <li style="margin-bottom: 10px;">
+                    <strong>Find the Perfect Spot:</strong> Identify the optimal location to attach the sensor
+                  </li>
+                  <li style="margin-bottom: 10px;">
+                    <strong>Assemble Components:</strong> Put together the coupler, strap, and sensor
+                  </li>
+                  <li style="margin-bottom: 10px;">
+                    <strong>Attach & Activate:</strong> Secure the sensor to your pipe and you're all set!
+                  </li>
+                </ol>
+              </div>
+              
+              <!-- Pro Tip Box -->
+              <div style="background-color: #E8F5E9; border-left: 4px solid #4B286D; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <h4 style="margin: 0 0 10px 0; color: #4B286D; font-size: 16px; font-weight: 600;">
+                  💡 Pro Tip: Ideal Sensor Placement
+                </h4>
+                <p style="margin: 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                  For best results, install your sensor inside the property, close to where the main water line enters the building. 
+                  Place it downstream of the water meter but <em>before</em> the line splits into multiple branches. We have attached a guide with detailed installation requirements.
+                </p>
+              </div>
+              
+              <!-- Support Section -->
+              <div style="background-color: #FFF9E6; border: 1px solid #FFE082; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <h4 style="margin: 0 0 10px 0; color: #4B286D; font-size: 16px; font-weight: 600;">
+                  🤝 Need Help?
+                </h4>
+                <p style="margin: 0 0 10px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                  If you encounter any challenges during installation, please click the link below for support articles, or contact us.
+                </p>
+                  support article link-enter here  
+                </p>
+                <p style="margin: 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                  📧 Contact us at:<br>
+                  <a href="mailto:email.address@companyname.com" style="color: #4B286D; text-decoration: none; font-weight: 600;">email.address@companyname.com</a> or 
+                  <a href="mailto:email.address@companyname.com" style="color: #4B286D; text-decoration: none; font-weight: 600;">email.address@companyname.com</a>
+                </p>
+              </div>
+              
+              <!-- Important Note -->
+              <div style="background-color: #F0F7FF; border-left: 4px solid #66CC00; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <h4 style="margin: 0 0 10px 0; color: #4B286D; font-size: 16px; font-weight: 600;">
+                  ⏱️ Important: Data Collection Period
+                </h4>
+                <p style="margin: 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                  To help us gather meaningful insights, please keep your sensor active for a minimum of <strong>3 months</strong>. 
+                  This duration allows us to collect comprehensive data patterns and deliver valuable water usage analytics back to you!
+                </p>
+              </div>
+              
+              <!-- Closing -->
+              <p style="margin: 25px 0 10px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                The SIC team is incredibly grateful for your participation in this initiative.
+              </p>
+              
+              <p style="margin: 10px 0 0 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                We can't wait to hear about your experience and feedback!
+              </p>
+              <p style="margin: 25px 0 0 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                <strong style="color: #4B286D;"></strong>
+              </p>
+              
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #F8F5FC; padding: 30px; text-align: center; border-top: 1px solid #E0D5F0;">
+              <p style="margin: 0 0 10px 0; color: #4B286D; font-size: 18px; font-weight: 600;">
+                WaterWise. <br>
+                Measure. Conserve.
+              </p>
+              <p style="margin: 0; color: #666666; font-size: 13px; line-height: 1.5;">
+                © 2024 Company Name Inc. All rights reserved.<br>
+                This is an automated email.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+  
+  return html;
+}
